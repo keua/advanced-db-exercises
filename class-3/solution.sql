@@ -1,6 +1,7 @@
 -- Schema
 -- Employee (SSN, Name{FName,MInit,LName}, BirthDate, Sex, Salary[x], Address{Street,City,Zip,State}[x])
 
+USE "infoh415-kubedaar-temporal";
 
 -- 1) An employee works in at most one department at any point in time.
 -- In other terms SSN is a sequenced primary key for Affiliation.
@@ -246,15 +247,15 @@ where E.SSN = L.SSN
     );
 
 -- (4) Give the name of the employee(s) that had the highest salary on 1/1/2002
-select E.FName, E.LName
-from Employee E, EmployeeSalary S
-where E.SSN = S.SSN
-    and salary = (
-        select max(salary)
-        from EmployeeSalary
-        where FromDate <= '2002-01-01' and '2002-01-01' < ToDate 
+select E.FName, E.LName -- we are taking the first name and the last name
+from Employee E, EmployeeSalary S -- from the employee table and employee salary table
+where E.SSN = S.SSN -- we are joining these tables
+    and salary = ( -- we are looking for the highest salary
+        select max(salary) -- we selected the max salary
+        from EmployeeSalary -- from the employee salary table
+        where FromDate <= '2002-01-01' and '2002-01-01' < ToDate -- we look for the precise date that we need
     )
-    and S.FromDate <= '2002-01-01' and '2002-01-01' < S.ToDate;
+    and S.FromDate <= '2002-01-01' and '2002-01-01' < S.ToDate; -- we are validating the date from the left side of the equality
 
 -- (5) Provide the salary and affiliation history for all employees
 GO
@@ -262,22 +263,22 @@ create function minDate
 (@one smalldatetime, @two smalldatetime)
 returns smalldatetime as
 begin
-    return CASE WHEN @one < @two then @one else @two end
+    return CASE WHEN @one < @two then @one else @two end -- we are chosen the smallest date between two dates
 end;
 go
 create function maxDate
 (@one smalldatetime, @two smalldatetime)
 returns smalldatetime as
 begin
-    return CASE WHEN @one > @two then @one else @two end
+    return CASE WHEN @one > @two then @one else @two end -- we are chosen the biggest date between two dates
 end;
 GO
-select E.FName, E.LName, D.DName, S.Salary,
-    'Start Date' = dbo.maxDate(S.FromDate,A.FromDate),
-    'End Date'= dbo.minDate(S.ToDate,A.ToDate)
-from Employee E, EmployeeSalary S, Affiliation A, Department D
-where E.SSN = S.SSN and E.SSN = A.SSN and A.DNumber = D.DNumber
-    and dbo.maxDate(S.FromDate,A.FromDate) < dbo.minDate(S.ToDate,A.ToDate)
+select E.FName, E.LName, D.DName, S.Salary, -- we are selecting name lastname of employee; department name; salary 
+    'Start Date' = dbo.maxDate(S.FromDate,A.FromDate), -- we are matching the salary and afiliation FROM DATE
+    'End Date'= dbo.minDate(S.ToDate,A.ToDate) -- we are matching the salary and afiliation TO DATE
+from Employee E, EmployeeSalary S, Affiliation A, Department D -- from employee; employee salary; affiliation; department
+where E.SSN = S.SSN and E.SSN = A.SSN and A.DNumber = D.DNumber -- we are joining the tables
+    --and dbo.maxDate(S.FromDate,A.FromDate) < dbo.minDate(S.ToDate,A.ToDate) 
 order by E.FName, E.LName;
 -- (6) Give the name of employees and the period of time in which they were supervisors
 -- but did not work in any project during the same period
